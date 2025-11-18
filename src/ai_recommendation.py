@@ -1,25 +1,89 @@
 # src/ai_recommendation.py
-import google.generativeai as genai
 import os
+import json
+import re
 
-# Configure Gemini API key
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+FALLBACK_DB = {
+    "Tomato Mosaic Virus": {
+        "Remedies": [
+            "Remove infected leaves.",
+            "Disinfect tools."
+        ],
+        "Preventive": [
+            "Use certified seeds.",
+            "Avoid touching wet plants."
+        ],
+        "Fertilizer": [
+            "Use balanced NPK.",
+            "Add organic compost."
+        ]
+    }
+}
+
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+
+
+def _make_prompt(disease_name, crop_type):
+    return f"""
+Return STRICT JSON ONLY with:
+{{
+  "Remedies": [],
+  "Preventive": [],
+  "Fertilizer": []
+}}
+
+Disease: {disease_name}
+Crop: {crop_type}
+
+Rules:
+- No extra text outside JSON.
+- Max 5 items per list.
+- Very simple language.
+"""
+
 
 def get_ai_recommendations(disease_name, crop_type="general crop"):
+
+    # ❌ Do NOT give AI outputs for unknown
+    if disease_name.lower().startswith("unknown"):
+        return {
+            "Remedies": ["Cannot generate remedy for unknown leaf."],
+            "Preventive": [],
+            "Fertilizer": []
+        }
+
+    key = disease_name.title()
+
+    # fallback db
+    if key in FALLBACK_DB:
+        return FALLBACK_DB[key]
+
+    if not GEMINI_KEY:
+        return {
+            "Remedies": [f"No AI available for {disease_name}."],
+            "Preventive": [],
+            "Fertilizer": []
+        }
+
     try:
+        import google.generativeai as genai
+        genai.configure(api_key=GEMINI_KEY)
+
         model = genai.GenerativeModel("models/gemini-2.5-flash")
+        prompt = _make_prompt(disease_name, crop_type)
 
-        prompt = (
-            f"You are an agricultural expert helping local farmers.\n"
-            f"The crop is '{crop_type}', and it is affected by '{disease_name}'.\n"
-            f"Give a short and easy-to-understand explanation in simple words — "
-            f"only the main remedies and fertilizer recommendations that farmers can follow easily.\n"
-            f"Use simple language, short sentences, and bullet points.\n"
-            f"Limit the response to 10–12 lines maximum.\n"
-        )
+        res = model.generate_content(prompt)
+        text = res.text
 
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        m = re.search(r"\{[\s\S]*\}", text)
+        if m:
+            return json.loads(m.group())
+
+        return {"Remedies": [text], "Preventive": [], "Fertilizer": []}
 
     except Exception as e:
-        return f"Error fetching AI recommendations: {str(e)}"
+        return {
+            "Remedies": [f"AI Error: {e}"],
+            "Preventive": [],
+            "Fertilizer": []
+        }
