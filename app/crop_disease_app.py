@@ -127,11 +127,13 @@ if img and st.button("Predict Disease"):
     # CASE 1: NOT A LEAF IMAGE
     # --------------------------------------
     if disease == "Not a Leaf Image":
+        leaf_prob = conf        # conf = probability of being a leaf
+        not_leaf_conf = (1 - leaf_prob) * 100
+
         st.error("🚫 This is NOT a leaf image.")
-        st.info(f"🔍 Confidence: {conf * 100:.2f}% sure it is NOT a leaf.")
+        st.info(f"🔍 Confidence: {not_leaf_conf:.2f}% sure it is NOT a leaf.")
         st.warning("Please upload a clear leaf image.")
         st.stop()
-
     # --------------------------------------
     # CASE 2: NORMAL LEAF OUTPUT
     # --------------------------------------

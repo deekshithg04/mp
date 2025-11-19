@@ -106,7 +106,7 @@ def check_dataset(root_dir):
             for f in small_images[:10]:
                 print("   ", f)
             if len(small_images) > 10:
-                print(f"   ... +{len(small_images)-10} more")
+             print(f"   ... +{len(small_images)-10} more")
 
         if duplicates:
             print("\n⚠️ DUPLICATES FOUND:")
