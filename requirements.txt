@@ -1,0 +1,8 @@
+tensorflow
+streamlit
+pillow
+numpy
+matplotlib
+scikit-learn
+google-generativeai   # optional (only if you plan to use Gemini)
+opencv-python          # optional for real_time demo
